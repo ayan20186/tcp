@@ -9,6 +9,8 @@ futures = "0.3"
 bytes = "1.4"
 log = "0.4"
 env_logger = "0.10"
+rand = "0.8"
+chrono = "0.4"
 
 [[bin]]
 name="server"
@@ -17,3 +19,7 @@ path="src/main.rs"
 [[bin]]
 name="client"
 path="src/client.rs"
+
+[[bin]]
+name="destination"
+path="src/destination.rs"
