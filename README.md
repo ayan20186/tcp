@@ -2,6 +2,10 @@
 
 This project implements a complete TCP-based logging system using the Tokio async runtime in Rust. It consists of three main components: a TCP server that receives and buffers log messages, a client that generates and sends log messages, and a destination server that receives the batched messages.
 
+Drive Link: 
+Rust ass2 Part 1: https://drive.google.com/file/d/1nWn6hwfNrhHI-IksNMFfHomf0VMYnQSe/view?usp=sharing
+
+
 ## Features
 
 - Asynchronous TCP server, client, and destination server built with Tokio
