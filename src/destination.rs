@@ -1,73 +1,16 @@
 use tokio::net::TcpListener;
 use tokio::io::AsyncReadExt;
-use log::{info, error,LevelFilter};
+use log::{info, error, debug};
 use std::sync::Arc;
-use std::io::Write;
 use tokio::sync::Mutex;
-use chrono::Local;
 use env_logger::Builder;
+use chrono::Local;
+use log::LevelFilter;
+use std::io::Write;
 
-// server destination will listen
-const ADDR: &str = "127.0.0.1:9090";
+pub async fn run_destination(messages: Arc<Mutex<Vec<String>>>, addr: String) -> Result<(), Box<dyn std::error::Error>> {
 
-
-pub async fn run_destination(messages: Arc<Mutex<Vec<String>>>) -> Result<(), Box<dyn std::error::Error>> {
-    let listener = TcpListener::bind(ADDR).await?;
-    run_destination_with_listener(messages, listener).await
-}
-
-// pub async fn run_destination(messages: Arc<Mutex<Vec<String>>>) -> Result<(), Box<dyn std::error::Error>> {
-pub async fn run_destination_with_listener(messages: Arc<Mutex<Vec<String>>>, listener: TcpListener) -> Result<(), Box<dyn std::error::Error>> {    
-    info!("Starting destination server on {}", ADDR);
-
-    // tcp listener bound to address
-    let listener = TcpListener::bind(ADDR).await?;
-
-    loop {
-
-        // accepts a new client connection
-        let (mut socket, addr) = listener.accept().await?;
-
-        // logging
-        info!("Received connection from: {}", addr);
-
-        // clones the arc for shared mssgs
-        let messages = Arc::clone(&messages);
-
-        // spawns a new task to handle new client
-        tokio::spawn(async move {
-            let mut buffer = String::new();
-            loop {
-                match socket.read_to_string(&mut buffer).await {
-                    Ok(0) => break,
-                    // n-bytes are received successfully
-                    // stores each message in shared vector
-                    Ok(n) => {
-                        info!("Received {} bytes", n);
-                        let mut messages = messages.lock().await;
-                        for line in buffer.lines() {
-                            info!("Destination received: {}", line);
-                            messages.push(line.to_string());
-                        }
-                        buffer.clear();
-                    }
-                    // error handling
-                    Err(e) => {
-                        error!("Failed to read from socket: {}", e);
-                        break;
-                    }
-                }
-            }
-        });
-    }
-}
-
-// main tokio function
-#[cfg(not(test))]
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-
-    // initialising logger
+    // Initialize the logger
     Builder::new()
         .format(|buf, record| {
             writeln!(buf,
@@ -79,10 +22,69 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         })
         .filter(None, LevelFilter::Info)
         .init();
+    // Log the start of the destination server
+    info!("Starting destination server on {}", addr);
 
-    // creates a shared vector to store mssg
+    // Bind the TCP listener to the specified address
+    let listener = TcpListener::bind(&addr).await?;
+
+    // Main server loop
+    loop {
+        tokio::select! {
+            // Wait for incoming connections
+            result = listener.accept() => {
+                match result {
+                    Ok((mut socket, addr)) => {
+                        info!("Received connection from: {}", addr);
+                        let messages = Arc::clone(&messages);
+                        // Spawn a new task to handle the connection
+                        tokio::spawn(async move {
+                            let mut buffer = String::new();
+                            // Read from the socket in a loop
+                            loop {
+                                match socket.read_to_string(&mut buffer).await {
+                                    Ok(0) => break, // Connection closed
+                                    Ok(n) => {
+                                        debug!("Received {} bytes", n);
+                                        // Lock the shared messages vector
+                                        let mut messages = messages.lock().await;
+                                        // Process each line in the received data
+                                        for line in buffer.lines() {
+                                            debug!("Destination received: {}", line);
+                                            messages.push(line.to_string());
+                                        }
+                                        info!("Destination total messages: {}", messages.len());
+                                        buffer.clear();
+                                    }
+                                    Err(e) => {
+                                        error!("Failed to read from socket: {}", e);
+                                        break;
+                                    }
+                                }
+                            }
+                        });
+                    }
+                    Err(e) => {
+                        error!("Failed to accept connection: {}", e);
+                    }
+                }
+            }
+            // Handle Ctrl+C signal for graceful shutdown
+            _ = tokio::signal::ctrl_c() => {
+                info!("Received shutdown signal");
+                break;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+// #[cfg(not(test))]
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Create a shared vector to store received messages
     let messages = Arc::new(Mutex::new(Vec::new()));
-
-    // runs destination server
-    run_destination(messages).await
+    // Run the destination server on localhost:9090
+    run_destination(messages, "127.0.0.1:9090".to_string()).await
 }
