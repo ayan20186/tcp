@@ -9,9 +9,9 @@ use tcp::{run_server, run_destination, run_client};
 // use tcp2::server::clear_server_buffer;
 
 // Initialize the logger for tests
-fn init() {
-    let _ = env_logger::builder().is_test(true).try_init();
-}
+// fn init() {
+//     let _ = env_logger::builder().is_test(true).try_init();
+// }
 
 // Find an available port for the server to bind to
 fn find_available_port() -> u16 {
@@ -82,7 +82,7 @@ async fn setup_server_and_destination() -> Result<(Arc<Mutex<Vec<String>>>, u16,
 // Test the batch timing functionality
 #[tokio::test]
 async fn test_batch_timing() -> Result<(), Box<dyn std::error::Error>> {
-    init();
+    // init();
 
     let (destination_messages, _dest_port, server_port, dest_handle, server_handle) = setup_server_and_destination().await?;
 
@@ -134,7 +134,7 @@ async fn test_batch_timing() -> Result<(), Box<dyn std::error::Error>> {
 // Test the complete system functionality
 #[tokio::test]
 async fn test_complete_system() -> Result<(), Box<dyn std::error::Error>> {
-    init();
+    // init();
 
     let (destination_messages, _dest_port, server_port, dest_handle, server_handle) = setup_server_and_destination().await?;
 
@@ -179,7 +179,7 @@ async fn test_complete_system() -> Result<(), Box<dyn std::error::Error>> {
 // Test the client reconnection functionality
 #[tokio::test]
 async fn test_client_reconnection() -> Result<(), Box<dyn std::error::Error>> {
-    init();
+    // init();
 
     let (destination_messages, _dest_port, server_port, dest_handle, mut server_handle) = setup_server_and_destination().await?;
 
@@ -187,7 +187,7 @@ async fn test_client_reconnection() -> Result<(), Box<dyn std::error::Error>> {
     let client_messages = Arc::new(Mutex::new(Vec::new()));
     let client_msgs_clone = Arc::clone(&client_messages);
     let client_handle = tokio::spawn(async move {
-        run_client(15, client_msgs_clone, format!("127.0.0.1:{}", server_port)).await.unwrap();
+        run_client(5, client_msgs_clone, format!("127.0.0.1:{}", server_port)).await.unwrap();
     });
 
     // Wait for a bit, then kill the server

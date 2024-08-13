@@ -10,7 +10,10 @@ use env_logger::Builder;
 use chrono::Local;
 use log::LevelFilter;
 use std::io::Write;
+use std::sync::Once;
 
+
+static INIT: Once = Once::new();
 
 // Flushing interval 10 secs
 const FLUSH_INTERVAL: Duration = Duration::from_secs(10);
@@ -29,7 +32,8 @@ impl fmt::Display for SendError {
 impl Error for SendError {}
 
 pub async fn run_server(addr: String, destination_addr: String) -> Result<(), Box<dyn Error + Send + Sync>> {
-    Builder::new()
+    // initialise the logger
+    INIT.call_once(||{Builder::new()
         .format(|buf, record| {
             writeln!(buf,
                 "{} [{}] - {}",
@@ -39,7 +43,7 @@ pub async fn run_server(addr: String, destination_addr: String) -> Result<(), Bo
             )
         })
         .filter(None, LevelFilter::Info)
-        .init();
+        .init();});
 
     info!("Starting TCP log server on {}", addr);
 
@@ -174,10 +178,4 @@ async fn send_batch_to_destination(batch: &[String], destination_addr: &str) -> 
     
     debug!("Successfully sent batch of {} messages to destination", batch.len());
     Ok(())
-}
-
-pub async fn clear_server_buffer(buffer: &Arc<Mutex<Vec<String>>>) {
-    let mut buffer = buffer.lock().await;
-    buffer.clear();
-    info!("Server buffer cleared");
 }

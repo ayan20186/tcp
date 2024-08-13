@@ -9,19 +9,6 @@ use log::LevelFilter;
 use std::io::Write;
 
 pub async fn run_destination(messages: Arc<Mutex<Vec<String>>>, addr: String) -> Result<(), Box<dyn std::error::Error>> {
-
-    // Initialize the logger
-    Builder::new()
-        .format(|buf, record| {
-            writeln!(buf,
-                "{} [{}] - {}",
-                Local::now().format("%Y-%m-%d %H:%M:%S"),
-                record.level(),
-                record.args()
-            )
-        })
-        .filter(None, LevelFilter::Info)
-        .init();
     // Log the start of the destination server
     info!("Starting destination server on {}", addr);
 
@@ -80,9 +67,21 @@ pub async fn run_destination(messages: Arc<Mutex<Vec<String>>>, addr: String) ->
     Ok(())
 }
 
-// #[cfg(not(test))]
+#[cfg(not(test))]
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Initialize the logger
+    Builder::new()
+        .format(|buf, record| {
+            writeln!(buf,
+                "{} [{}] - {}",
+                Local::now().format("%Y-%m-%d %H:%M:%S"),
+                record.level(),
+                record.args()
+            )
+        })
+        .filter(None, LevelFilter::Info)
+        .init();
     // Create a shared vector to store received messages
     let messages = Arc::new(Mutex::new(Vec::new()));
     // Run the destination server on localhost:9090
